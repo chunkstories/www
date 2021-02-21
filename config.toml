@@ -20,3 +20,8 @@ url = "https://discord.gg/wudd4pe"
 [[languages.en.menu.primary]]
 name = "blog"
 url = "/blog"
+
+[markup]
+  [markup.highlight]
+    style = "github"
+    tabWidth = 4
