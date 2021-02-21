@@ -14,8 +14,12 @@ name = "code"
 url = "https://github.com/Hugobros3/chunkstories"
 
 [[languages.en.menu.primary]]
-name = "discord"
+name = "talk"
 url = "https://discord.gg/wudd4pe"
+
+[[languages.en.menu.primary]]
+name = "docs"
+url = "/docs"
 
 [[languages.en.menu.primary]]
 name = "blog"
