@@ -1,6 +1,6 @@
 <div class="col-sm-121">
     <div class="card-columns">
-        {{ $path := print "static\\" (.Get "src") }}
+        {{ $path := print "static/" (.Get "src") }}
         {{ $url  := print .Site.BaseURL (.Get "src") }}
         {{ range (readDir $path)  }}            
             {{ $src := print $url "/" .Name }}
