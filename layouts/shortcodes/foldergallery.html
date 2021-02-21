@@ -1,0 +1,14 @@
+<div class="col-sm-121">
+    <div class="card-columns">
+        {{ $path := print "static\\" (.Get "src") }}
+        {{ $url  := print .Site.BaseURL (.Get "src") }}
+        {{ range (readDir $path)  }}            
+            {{ $src := print $url "/" .Name }}
+            <div class="card">
+            <a data-toggle="lightbox" data-gallery="gallery" href="{{ $src }}">
+                <img src="{{ $src }}" class="card-image img-fluid rounded gallerypic">    
+            </a>
+            </div>
+        {{ end }}
+    </div>
+</div>

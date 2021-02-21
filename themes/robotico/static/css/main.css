@@ -24,6 +24,10 @@ img + em {
     }
 }
 
+.content .gallerypic {
+    max-width: 100%;
+}
+
 .markdown table {
     font-size: 0.9em;
     margin-bottom: 15px;

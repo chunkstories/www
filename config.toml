@@ -25,6 +25,10 @@ url = "/docs"
 name = "blog"
 url = "/blog"
 
+[[languages.en.menu.primary]]
+name = "pics"
+url = "/pics"
+
 [markup]
   [markup.highlight]
     style = "github"
