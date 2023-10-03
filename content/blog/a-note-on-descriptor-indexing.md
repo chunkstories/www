@@ -3,7 +3,7 @@ title: "A note on Descriptor Indexing"
 date: 2019-01-26
 ---
 
-*Was writing part two of the series on Chunk Stories new rendering tech, but this section was getting out of hand so I just spun it off as it's own post. Here's a very technical post intended at Vulkan developpers wondering about VK_EXT_descriptor_indexing*
+*Was writing part two of the series on Chunk Stories new rendering tech, but this section was getting out of hand so I just spun it off as it's own post. Here's a very technical post intended at Vulkan developers wondering about VK_EXT_descriptor_indexing*
 
 Talking with some folks on rendering-related discords, I had a few conversations about the way I solve the texture binding problem in my engine, and there has been some confusion, notably due to a really crappy naming convention used since OpenGL and unclear terminology in the spec ( those are almost the same problem come to think of it ... ). I sort of needs to lay this out flat before I can proceed.
 
@@ -25,9 +25,9 @@ Talking with some folks on rendering-related discords, I had a few conversations
 
 ## The texture binding problem
 
-Texture binding is one of these nasty things you need to stay on top of in realtime graphics today. The classical approach is to have a bunch of textures declared as opaque uniform variables and swap them in-between draw calls. Unfortunately even if Vulkan lowers the cost of draw calls dramatically, rendering some scenes with a lot of objects with different textures gets impractical quite fast. Batching object instances that have arbitrary textures becomes a requirement in a lot of cases.
+Texture binding is one of these nasty things you need to stay on top of in realtime graphics today. The classical approach is to have a bunch of textures declared as opaque uniform variables and swap them in-between draw calls. Unfortunately, even if Vulkan lowers the cost of draw calls dramatically, rendering some scenes with a lot of objects with different textures gets impractical quite fast. Batching object instances that have arbitrary textures becomes a requirement in a lot of cases.
 
-The difference between actual arrays of textures and onion textures is especially important in that context: your shader needs to to select a different texture at runtime, depending on some arbitrary input data that's not constant. Onion textures on the face of it make it easy, since doing that works out of the box, you just use the `z` component of the coordinates you're using to sample them to choose which layer. On the other hand, Vulkan doesn't even guarantee you can dynamically index into an array of textures **at all**.
+The difference between actual arrays of textures and onion textures is especially important in that context: your shader needs to select a different texture at runtime, depending on some arbitrary input data that's not constant. Onion textures on the face of it make it easy, since doing that works out of the box, you just use the `z` component of the coordinates you're using to sample them to choose which layer. On the other hand, Vulkan doesn't even guarantee you can dynamically index into an array of textures **at all**.
 
 ## The tiers of texture array indexing support
 
@@ -39,16 +39,16 @@ There are two features you can enable that relate to support for using arrays of
 | 1 | Enabling the core feature `sampledImageArrayDynamicIndexing` | You can index into your texture arrays with whatever you want ( your index can be *dynamic*, that is, known only at runtime) but the index has to be *uniform* accross the draw call: it has to be the same for all shader invocations otherwise it is undefined behavior and you get nasty visual corruptions. |
 | 2 | Support for `VK_EXT_descriptor_indexing` and enabling the extension feature `sampledImageArrayNonUniformIndexing` | Indexes can be dynamically *non-uniform*: they can freely diverge between shader invocations. This means you can use anything you want as an index: a `flat int` vertex input attribute, the draw/instanceID, an atomic counter, a random number ...
 
-Tier 0 is essentially irrelevant because almost all Vulkan-enabled devices have dynamic uniform indexing of texture arrays. It's mostly representing older hardware that had no concept of arrays of samplers natively. Stuff like MoltenVK and Swiftshader don't support them, but that's more of a work-in-progress issue than an limitation of the underlying hardware.
+Tier 0 is essentially irrelevant because almost all Vulkan-enabled devices have dynamic uniform indexing of texture arrays. It's mostly representing older hardware that had no concept of arrays of samplers natively. Stuff like MoltenVK and Swiftshader don't support them, but that's more of a work-in-progress issue than a limitation of the underlying hardware.
 
-Tier 1 is where interesting stuff begins, but it ultimately isn't a great solution: it can help you avoid switching texture descriptors arround by using an index stored in a push constant or an UBO indexed by the baseInstanceIndex, but you are still required to make sure whatever you use as indexes are uniform, and thus the same textures are used accross one draw (including multiple instances of that draw if it's instanced), and so you can't batch much with instancing, you can mostly save on swapping descriptors arround. You can however cut pretty well into the number of vkCmdDraw, since each entry in those is considered a seperate draw when it comes to uniformity in shader wavefronts.
+Tier 1 is where interesting stuff begins, but it ultimately isn't a great solution: it can help you avoid switching texture descriptors arround by using an index stored in a push constant or an UBO indexed by the baseInstanceIndex, but you are still required to make sure whatever you use as indexes are uniform, and thus the same textures are used across one draw (including multiple instances of that draw if it's instanced), and so you can't batch much with instancing, you can mostly save on swapping descriptors arround. You can, however, cut pretty well into the number of vkCmdDraw, since each entry in those is considered a separate draw when it comes to uniformity in shader wavefronts.
 
 Tier 2 is the real deal, the EXT_descriptor_indexing extension gives devices a "non-uniform dynamic descriptor indexing" feature you can use in combination with unsized descriptors (= giant descriptors whose size is runtime dependent). This enables the use case where you make one giant descriptor set with all your texture resources in an unsized array, and then you can use regular integers to index that array, effectively getting non-opaque texture handles like you would have gotten with `GL_ARB_bindless_texture`, except this time supporting non-uniform access, **something you cannot do at all on AMD and Intel in OpenGL**, since they don't expose any extension for that functionality. This is one of the rare cases where Vulkan has an actual exclusive feature! 
 
 I point you to [this presentation](https://www.youtube.com/watch?v=tXipcoeuNh4) on Youtube for more details on the VK_ext_descriptor_indexing extension and how it works. I will be relying on that tier of support with the Vulkan backend for Chunk Stories, and will now explain the rationale for why.
 
 ![](/images/blog/descriptor_indexing_corruption.png)
-*What you get if you try to use non-uniform indexes with Tier 1 support. Disguting.*
+*What you get if you try to use non-uniform indexes with Tier 1 support. Disgusting.*
 
 ## Caveats with using descriptor indexing
 
@@ -56,7 +56,7 @@ First, let's talk about the problems using `VK_EXT_descriptor_indexing` causes:
 
  * It's not supported everywhere:
 	 * won't work on mobile (that I don't care)
-	 * won't run on Intel hd graphics before skylake (meh)
+	 * won't run on Intel HD graphics before Skylake (meh)
  * *Might* be marginally slower at runtime because of the indirection, in practice I haven't been able to detect any significant performance delta yet.
  * It's cutting edge ! Found an AMD driver crash and a validation layer crash when working with it, both fixed since.
  * ~~**No RenderDoc support**~~ RenderDoc now supports it !
@@ -100,9 +100,9 @@ Put simply, using onion textures or any form of global texture atlas feels like 
 
 This note might make it sound like I hate onion textures. That's not really my point, it's an older and technically inferior solution to the old problem of batching multiple objects with arbitrary different textures. There was a time where texture atlases was all we could do, and at that time I would have been a huge advocate to using those for everything. The point is that it's the best, most flexible, one-size-fits-all solution to the texture binding problem. 
 
-My intent with Chunk Stories tech is to give it the best possible (flexibility / simplicity) ratio, even if I have to pay a small price at runtime. You can see that in the choice of using the JVM instead of a native language, the choice of data structures or the few amount of dependencies and frameworks used. Chunk Stories has different design goals than IdTech 6, and this is something that's sadly sometimes hard to get accross.
+My intent with Chunk Stories tech is to give it the best possible (flexibility / simplicity) ratio, even if I have to pay a small price at runtime. You can see that in the choice of using the JVM instead of a native language, the choice of data structures or the few amount of dependencies and frameworks used. Chunk Stories has different design goals than IdTech 6, and this is something that's sadly sometimes hard to get across.
 
 ![](/images/blog/tileset.png)
 *This was never fun to deal with. At least it's easy to visualize !*
 
-In the context of this project, it makes sense to not support mediocre GPUs that barely got Vulkan support at all and to deal with the freshness of the descriptor indexing extension because of how damn simple it makes handling texture binds in the engine. Bindless is one of these features that sounded like the future in OpenGL, and I'm sort of disappointed Vulkan couldn't make that a core feature (and shocked it took them so long to properly re-introduce the same functionality, `VK_EXT_descriptor_indexing` is from 2018 !). All in all I'm pretty happy about the situation though, I knew from the start I was going to have to cut off a lot of old but still quite good hardware with Vulkan anyway (pre-gcn AMD cards still have some life into them, and so does Fermi cards from Nvidia), and the additional limitations don't really change that picture. Addressing that hardware left behind is something that would and will be more appropriate in a seperate legacy OpenGL backend anyway !
+In the context of this project, it makes sense not to support mediocre GPUs that barely got Vulkan support at all and to deal with the freshness of the descriptor indexing extension because of how damn simple it makes handling texture binds in the engine. Bindless is one of these features that sounded like the future in OpenGL, and I'm sort of disappointed Vulkan couldn't make that a core feature (and shocked it took them so long to properly re-introduce the same functionality, `VK_EXT_descriptor_indexing` is from 2018 !). All in all, I'm pretty happy about the situation though, I knew from the start I was going to have to cut off a lot of old but still quite good hardware with Vulkan anyway (pre-gcn AMD cards still have some life into them, and so does Fermi cards from Nvidia), and the additional limitations don't really change that picture. Addressing that hardware left behind is something that would and will be more appropriate in a seperate legacy OpenGL backend anyway !
